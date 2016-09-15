@@ -1,0 +1,7 @@
+/server.log
+/participants.db
+
+*.pyc
+*.sublime-*
+
+/.psiturk_history
