@@ -8,7 +8,7 @@ Demonstrates the jsych-mdp plugin
  */
 
 (function() {
-  var add_trial_data, cycle, debrief_block, experiment_blocks, getSubjectData, instructions_block, md_to_html, mdp_block, psiturk, states, weighted_sample, welcome_block,
+  var MDP, add_trial_data, debrief_block, experiment_blocks, getSubjectData, initial_state, instructions_block, md_to_html, mdp_block, psiturk, welcome_block,
     slice = [].slice;
 
   psiturk = new PsiTurk(uniqueId, adServerLoc, mode);
@@ -34,61 +34,85 @@ Demonstrates the jsych-mdp plugin
     timing_post_trial: 500
   };
 
-  weighted_sample = function(xs, ps) {
-    var acc, i, j, ref, thresh;
-    thresh = Math.random();
-    console.log(thresh);
-    acc = 0;
-    for (i = j = 0, ref = xs.length; 0 <= ref ? j <= ref : j >= ref; i = 0 <= ref ? ++j : --j) {
-      console.log('acc', acc);
-      acc += ps[i];
-      if (acc > thresh) {
-        return xs[i];
-      }
-    }
-  };
-
-  cycle = function() {
-    var i, opts;
-    opts = 1 <= arguments.length ? slice.call(arguments, 0) : [];
-    i = -1;
-    return function() {
-      i += 1;
-      return opts[i % opts.length];
-    };
-  };
-
-  states = {
-    circle: {
-      id: 'circle',
-      stimuli: ['static/images/blue.png', 'static/images/orange.png'],
-      actions: {
-        F: function() {
-          return weighted_sample(['circle', 'square'], [0.8, 0.2]);
-        },
-        J: function() {
-          return weighted_sample(['circle', 'square'], [0.2, 0.8]);
+  MDP = (function() {
+    var cycle, weighted_sample;
+    weighted_sample = function(xs, ps) {
+      var acc, i, j, ref, thresh;
+      thresh = Math.random();
+      acc = 0;
+      for (i = j = 0, ref = xs.length; 0 <= ref ? j <= ref : j >= ref; i = 0 <= ref ? ++j : --j) {
+        acc += ps[i];
+        if (acc > thresh) {
+          return xs[i];
         }
       }
-    },
-    square: {
-      id: 'square',
-      stimuli: ['static/images/red.png', 'static/images/green.png'],
-      actions: {
-        F: function() {
-          return 'square';
-        },
-        J: cycle('circle', 'square')
+    };
+    cycle = function() {
+      var i, opts;
+      opts = 1 <= arguments.length ? slice.call(arguments, 0) : [];
+      i = -1;
+      return function() {
+        i += 1;
+        return opts[i % opts.length];
+      };
+    };
+    MDP = {
+      circle: {
+        id: 'circle',
+        actions: {
+          F: {
+            img: 'static/images/blue.png',
+            transition: function() {
+              return weighted_sample(['circle', 'square'], [0.8, 0.2]);
+            },
+            reward: function() {
+              return 1;
+            }
+          },
+          J: {
+            img: 'static/images/orange.png',
+            transition: function() {
+              return weighted_sample(['circle', 'square'], [0.2, 0.8]);
+            },
+            reward: function() {
+              return 0;
+            }
+          }
+        }
+      },
+      square: {
+        id: 'square',
+        actions: {
+          F: {
+            img: 'static/images/red.png',
+            transition: function() {
+              return 'square';
+            },
+            reward: function() {
+              return 2;
+            }
+          },
+          J: {
+            img: 'static/images/green.png',
+            transition: cycle('square', 'circle'),
+            reward: function() {
+              return 10;
+            }
+          }
+        }
       }
-    }
-  };
+    };
+    return MDP;
+  })();
+
+  initial_state = MDP['circle'];
 
   mdp_block = {
     timeline: [
       {
         type: 'mdp',
-        states: states,
-        start: states['circle']
+        MDP: MDP,
+        initial_state: initial_state
       }
     ],
     loop_function: function(data) {
@@ -128,7 +152,7 @@ Demonstrates the jsych-mdp plugin
     };
   };
 
-  experiment_blocks = [welcome_block, instructions_block, mdp_block];
+  experiment_blocks = [mdp_block];
 
   console.log('initialze jsPsych');
 

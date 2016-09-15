@@ -33,43 +33,57 @@ instructions_block =
   timing_post_trial: 500
 
 
-weighted_sample = (xs, ps) ->
-  # returns xs[i] with probability ps[i]
-  thresh = Math.random()
-  console.log(thresh)
-  acc = 0
-  for i in [0..xs.length]
-    console.log('acc', acc)
-    acc += ps[i]
-    if acc > thresh
-      return xs[i]
 
-cycle = (opts...) ->
-  # ABC -> ABCABCABC
-  i = -1
-  ->
-    i+=1
-    opts[i % opts.length]
+MDP = do ->
 
-states =
-  circle:
-    id: 'circle'
-    stimuli: ['static/images/blue.png', 'static/images/orange.png']
-    actions:
-      F: -> weighted_sample(['circle', 'square'], [0.8, 0.2])
-      J: -> weighted_sample(['circle', 'square'], [0.2, 0.8])
-      
-  square:
-    id: 'square'
-    stimuli: ['static/images/red.png', 'static/images/green.png']
-    actions:
-      F: -> 'square'
-      J: cycle('circle', 'square')
-  
+  weighted_sample = (xs, ps) ->
+    # returns xs[i] with probability ps[i]
+    thresh = Math.random()
+    acc = 0
+    for i in [0..xs.length]
+      acc += ps[i]
+      if acc > thresh
+        return xs[i]
+
+  cycle = (opts...) ->
+    # ABC -> ABCABCABC
+    i = -1
+    ->
+      i += 1
+      opts[i % opts.length]
+
+  MDP =
+    circle:
+      id: 'circle'
+      actions:
+        F:
+          img: 'static/images/blue.png'
+          transition: -> weighted_sample(['circle', 'square'], [0.8, 0.2])
+          reward: -> 1
+        J:
+          img: 'static/images/orange.png'
+          transition: -> weighted_sample(['circle', 'square'], [0.2, 0.8])
+          reward: -> 0
+
+    square:
+      id: 'square'
+      actions:
+        F:
+          img: 'static/images/red.png'
+          transition: -> 'square'
+          reward: -> 2
+        J:
+          img: 'static/images/green.png'
+          transition: cycle('square', 'circle')
+          reward: -> 10
+  return MDP
+
+initial_state = MDP['circle']
+
 
 
 mdp_block =
-  timeline: [type: 'mdp', states: states, start: states['circle']]
+  timeline: [type: 'mdp', MDP: MDP, initial_state: initial_state]
   loop_function: (data) -> not data[0].done
 
 
@@ -99,8 +113,8 @@ getSubjectData = ->
   }
 
 experiment_blocks = [
-  welcome_block
-  instructions_block
+  # welcome_block
+  # instructions_block
   # test_block
   mdp_block
   # debrief_block

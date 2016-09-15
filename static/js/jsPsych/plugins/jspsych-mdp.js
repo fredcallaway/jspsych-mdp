@@ -25,40 +25,38 @@ Documentation: HA!
     plugin = {};
     state = null;
     plugin.trial = function(display_element, trial) {
-      var after_response, choices, end_trial, img, keyboardListener, response, setTimeoutHandlers, states, stimuli_html, t1, t2;
-      states = trial.states;
+      var action, after_response, choices, d, end_trial, img, imgs, keyboardListener, ref, setTimeoutHandlers, states, stimuli_html, t1, t2, trial_data;
+      states = trial.MDP;
       if (state === null) {
-        state = trial.start;
+        state = trial.initial_state;
       }
-      response = null;
       console.log('mdp trial in state ' + state.id);
+      trial_data = null;
       setTimeoutHandlers = [];
       if (state.prompt) {
         display_element.append(state.prompt);
       }
-      stimuli_html = [
-        "<div id='jspsych-distributed-imgs'>", ((function() {
-          var j, len, ref, results;
-          ref = state.stimuli;
-          results = [];
-          for (j = 0, len = ref.length; j < len; j++) {
-            img = ref[j];
-            results.push("<img src='" + img + "' alt=''/>");
-          }
-          return results;
-        })()).join('\n'), '<span class="stretch"></span></div>'
-      ].join('\n');
+      console.log(Object.keys(state.actions));
+      console.log(state.actions.F.img);
+      ref = state.actions;
+      for (action in ref) {
+        d = ref[action];
+        console.log(action, d.img);
+      }
+      imgs = (function() {
+        var ref1, results;
+        ref1 = state.actions;
+        results = [];
+        for (action in ref1) {
+          img = ref1[action].img;
+          results.push("<img class='mdp-stim' id='action-" + action + "' src='" + img + "' alt=''/>");
+        }
+        return results;
+      })();
+      stimuli_html = "<div id='jspsych-distributed-imgs'>" + imgs.join('\n') + '<span class="stretch"></span></div>';
       display_element.append(stimuli_html);
       end_trial = function() {
-        var i, next_state_id, trial_data;
-        trial_data = {
-          state: state.id,
-          action: KEYCODE_TO_LETTER[response.key],
-          rt: response.rt
-        };
-        console.log(trial_data);
-        next_state_id = state.actions[trial_data.action]();
-        state = states[next_state_id];
+        var i;
         display_element.html('');
         i = 0;
         while (i < setTimeoutHandlers.length) {
@@ -71,13 +69,30 @@ Documentation: HA!
         jsPsych.finishTrial(trial_data);
       };
       after_response = function(info) {
-        $('#jspsych-single-stim-stimulus').addClass('responded');
-        if (response === null) {
-          response = info;
+        var next_state_id, reward;
+        if (trial_data === !null) {
+          return;
         }
-        end_trial();
+        trial_data = {
+          state: state.id,
+          action: KEYCODE_TO_LETTER[info.key],
+          rt: info.rt
+        };
+        action = state.actions[trial_data.action];
+        next_state_id = action.transition();
+        reward = action.reward();
+        state = states[next_state_id];
+        trial_data.reward = reward;
+        display_element.append($('<div>', {
+          id: 'jspsych-mdp-reward',
+          html: '<p>' + '$'.repeat(reward) + '</p>'
+        }));
+        $('.mdp-stim').css('visibility', 'hidden');
+        $("#action-" + trial_data.action).css('visibility', 'visible');
+        console.log('trial_data ', trial_data);
+        setTimeout(end_trial, 2000);
       };
-      choices = ['F', 'J'];
+      choices = Object.keys(state.actions);
       keyboardListener = jsPsych.pluginAPI.getKeyboardResponse({
         callback_function: after_response,
         valid_responses: choices,

@@ -23,11 +23,12 @@ jsPsych.plugins['mdp'] = do ->
 
   plugin.trial = (display_element, trial) ->
     # Use existing state or initialize new state.
-    states = trial.states
+    states = trial.MDP
     if state is null
-      state = trial.start
-    response = null
+      state = trial.initial_state
     console.log 'mdp trial in state ' + state.id
+
+    trial_data = null
 
     # if any trial variables are functions
     # this evaluates the function and replaces
@@ -52,26 +53,29 @@ jsPsych.plugins['mdp'] = do ->
       display_element.append state.prompt
 
     # display stimulus
-    stimuli_html = [
-      "<div id='jspsych-distributed-imgs'>"
-      ("<img src='#{img}' alt=''/>" for img in state.stimuli).join('\n')
+    console.log Object.keys(state.actions)
+    console.log state.actions.F.img
+
+    for action, d of state.actions
+      console.log action, d.img
+
+    imgs = for action, {img: img} of state.actions
+      "<img class='mdp-stim' id='action-#{action}' src='#{img}' alt=''/>"
+
+    stimuli_html =
+      "<div id='jspsych-distributed-imgs'>" +
+      imgs.join('\n') +
       '<span class="stretch"></span></div>'
-    ].join('\n')
+
 
     display_element.append stimuli_html
+    # display_element.append $('<div>',
+    #   id: 'jspsych-distributed-imgs'
+    #   html: imgs.join('') + '<span class="stretch"></span>'
+    # )
+
 
     end_trial = ->
-
-      trial_data =
-        state: state.id
-        action: KEYCODE_TO_LETTER[response.key]
-        rt: response.rt
-      console.log trial_data
-
-      # update state
-      next_state_id = state.actions[trial_data.action]()
-      state = states[next_state_id]
-
       # clear the display
       display_element.html ''
 
@@ -89,19 +93,40 @@ jsPsych.plugins['mdp'] = do ->
       jsPsych.finishTrial trial_data
       return
 
+
     after_response = (info) ->
-      # after a valid response, the stimulus will have the CSS class 'responded'
-      # which can be used to provide visual feedback that a response was recorded
-      $('#jspsych-single-stim-stimulus').addClass 'responded'
+      # only accept one response
+      return if trial_data is not null
       
-      # only record the first response
-      if response is null
-        response = info
-      end_trial()
+      trial_data =
+        state: state.id
+        action: KEYCODE_TO_LETTER[info.key]
+        rt: info.rt
+
+      # update state and assign reward
+      action = state.actions[trial_data.action]
+      next_state_id = action.transition()
+      reward = action.reward()
+      state = states[next_state_id]
+      trial_data.reward = reward
+
+      display_element.append $('<div>',
+        id: 'jspsych-mdp-reward'
+        html: '<p>' + '$'.repeat(reward) + '</p>'
+      )
+
+
+      # hide the images for the other actions
+      $('.mdp-stim').css 'visibility', 'hidden'
+      $("#action-#{trial_data.action}").css 'visibility', 'visible'
+
+      console.log 'trial_data ', trial_data
+      
+      setTimeout end_trial, 2000
       return
 
     # start the response listener
-    choices = ['F', 'J']  # FIXME
+    choices = Object.keys(state.actions)
     keyboardListener = jsPsych.pluginAPI.getKeyboardResponse(
       callback_function: after_response
       valid_responses: choices

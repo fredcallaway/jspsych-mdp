@@ -118,6 +118,19 @@ input[type="text"] {
 
 /* PLUGIN: jspsych-mdp */
 
+#jspsych-mdp-reward {
+  font-size: 80px;
+  font-weight: 400;
+  font-family: 'Open Sans', 'Arial', sans-serif;
+  text-align: center;
+  vertical-align: middle;
+  border: 1px solid transparent;
+  border-radius: 4px;
+  /*color: #333;*/
+  /*background-color: #fff;*/
+  /*border-color: #ccc;*/
+}
+
 #jspsych-distributed-imgs {   
   margin-top:90px;
   margin-left: auto; 
