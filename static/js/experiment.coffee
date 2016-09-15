@@ -23,6 +23,7 @@ welcome_block =
   type: "text"
   text: md_to_html('#MDP demonstration')
 
+
 instructions_block =
   type: "text"
   text: md_to_html("""
@@ -30,6 +31,7 @@ instructions_block =
 
   *It's going to be great*!
   """)
+
   timing_post_trial: 500
 
 
@@ -52,12 +54,19 @@ MDP = do ->
       i += 1
       opts[i % opts.length]
 
+  increasing = (start, step) ->
+    x = start - step
+    ->
+      x += step
+      x
+
   MDP =
     circle:
       id: 'circle'
       actions:
-        F:
+        F: # action name is the key that takes the action
           img: 'static/images/blue.png'
+          # transition and reward are functions
           transition: -> weighted_sample(['circle', 'square'], [0.8, 0.2])
           reward: -> 1
         J:
@@ -70,12 +79,17 @@ MDP = do ->
       actions:
         F:
           img: 'static/images/red.png'
-          transition: -> 'square'
+          transition: -> weighted_sample(['square', 'final'], [0, 1])
           reward: -> 2
         J:
           img: 'static/images/green.png'
           transition: cycle('square', 'circle')
-          reward: -> 10
+          reward: increasing(3, 2)
+
+    final:
+      id: 'final'
+      final: true
+
   return MDP
 
 initial_state = MDP['circle']
@@ -113,7 +127,7 @@ getSubjectData = ->
   }
 
 experiment_blocks = [
-  # welcome_block
+  welcome_block
   # instructions_block
   # test_block
   mdp_block

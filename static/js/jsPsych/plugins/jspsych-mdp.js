@@ -25,7 +25,7 @@ Documentation: HA!
     plugin = {};
     state = null;
     plugin.trial = function(display_element, trial) {
-      var action, after_response, choices, d, end_trial, img, imgs, keyboardListener, ref, setTimeoutHandlers, states, stimuli_html, t1, t2, trial_data;
+      var action, after_response, choices, end_trial, img, imgs, keyboardListener, setTimeoutHandlers, states, stimuli_html, t1, t2, trial_data;
       states = trial.MDP;
       if (state === null) {
         state = trial.initial_state;
@@ -36,19 +36,12 @@ Documentation: HA!
       if (state.prompt) {
         display_element.append(state.prompt);
       }
-      console.log(Object.keys(state.actions));
-      console.log(state.actions.F.img);
-      ref = state.actions;
-      for (action in ref) {
-        d = ref[action];
-        console.log(action, d.img);
-      }
       imgs = (function() {
-        var ref1, results;
-        ref1 = state.actions;
+        var ref, results;
+        ref = state.actions;
         results = [];
-        for (action in ref1) {
-          img = ref1[action].img;
+        for (action in ref) {
+          img = ref[action].img;
           results.push("<img class='mdp-stim' id='action-" + action + "' src='" + img + "' alt=''/>");
         }
         return results;
@@ -65,6 +58,9 @@ Documentation: HA!
         }
         if (typeof keyboardListener !== 'undefined') {
           jsPsych.pluginAPI.cancelKeyboardResponse(keyboardListener);
+        }
+        if (trial_data.done) {
+          display_element.html("<div class=big-text>Nice job!</div>");
         }
         jsPsych.finishTrial(trial_data);
       };
@@ -83,9 +79,12 @@ Documentation: HA!
         reward = action.reward();
         state = states[next_state_id];
         trial_data.reward = reward;
+        if (state.final) {
+          trial_data.done = true;
+        }
         display_element.append($('<div>', {
           id: 'jspsych-mdp-reward',
-          html: '<p>' + '$'.repeat(reward) + '</p>'
+          html: '$'.repeat(reward) || 'X'
         }));
         $('.mdp-stim').css('visibility', 'hidden');
         $("#action-" + trial_data.action).css('visibility', 'visible');

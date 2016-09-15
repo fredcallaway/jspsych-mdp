@@ -52,13 +52,7 @@ jsPsych.plugins['mdp'] = do ->
     if state.prompt
       display_element.append state.prompt
 
-    # display stimulus
-    console.log Object.keys(state.actions)
-    console.log state.actions.F.img
-
-    for action, d of state.actions
-      console.log action, d.img
-
+    # display action images
     imgs = for action, {img: img} of state.actions
       "<img class='mdp-stim' id='action-#{action}' src='#{img}' alt=''/>"
 
@@ -66,13 +60,7 @@ jsPsych.plugins['mdp'] = do ->
       "<div id='jspsych-distributed-imgs'>" +
       imgs.join('\n') +
       '<span class="stretch"></span></div>'
-
-
     display_element.append stimuli_html
-    # display_element.append $('<div>',
-    #   id: 'jspsych-distributed-imgs'
-    #   html: imgs.join('') + '<span class="stretch"></span>'
-    # )
 
 
     end_trial = ->
@@ -88,6 +76,9 @@ jsPsych.plugins['mdp'] = do ->
       # kill keyboard listeners
       if typeof keyboardListener != 'undefined'
         jsPsych.pluginAPI.cancelKeyboardResponse keyboardListener
+
+      if trial_data.done
+        display_element.html "<div class=big-text>Nice job!</div>"
 
       # move on to the next trial
       jsPsych.finishTrial trial_data
@@ -110,18 +101,20 @@ jsPsych.plugins['mdp'] = do ->
       state = states[next_state_id]
       trial_data.reward = reward
 
+      if state.final
+        trial_data.done = true
+
+      # display reward
       display_element.append $('<div>',
         id: 'jspsych-mdp-reward'
-        html: '<p>' + '$'.repeat(reward) + '</p>'
+        html: '$'.repeat(reward) or 'X'
       )
 
-
-      # hide the images for the other actions
+      # hide the images of the other actions
       $('.mdp-stim').css 'visibility', 'hidden'
       $("#action-#{trial_data.action}").css 'visibility', 'visible'
 
       console.log 'trial_data ', trial_data
-      
       setTimeout end_trial, 2000
       return
 

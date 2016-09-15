@@ -35,7 +35,7 @@ Demonstrates the jsych-mdp plugin
   };
 
   MDP = (function() {
-    var cycle, weighted_sample;
+    var cycle, increasing, weighted_sample;
     weighted_sample = function(xs, ps) {
       var acc, i, j, ref, thresh;
       thresh = Math.random();
@@ -54,6 +54,14 @@ Demonstrates the jsych-mdp plugin
       return function() {
         i += 1;
         return opts[i % opts.length];
+      };
+    };
+    increasing = function(start, step) {
+      var x;
+      x = start - step;
+      return function() {
+        x += step;
+        return x;
       };
     };
     MDP = {
@@ -86,7 +94,7 @@ Demonstrates the jsych-mdp plugin
           F: {
             img: 'static/images/red.png',
             transition: function() {
-              return 'square';
+              return weighted_sample(['square', 'final'], [0, 1]);
             },
             reward: function() {
               return 2;
@@ -95,11 +103,13 @@ Demonstrates the jsych-mdp plugin
           J: {
             img: 'static/images/green.png',
             transition: cycle('square', 'circle'),
-            reward: function() {
-              return 10;
-            }
+            reward: increasing(3, 2)
           }
         }
+      },
+      final: {
+        id: 'final',
+        final: true
       }
     };
     return MDP;
@@ -152,7 +162,7 @@ Demonstrates the jsych-mdp plugin
     };
   };
 
-  experiment_blocks = [mdp_block];
+  experiment_blocks = [welcome_block, mdp_block];
 
   console.log('initialze jsPsych');
 
